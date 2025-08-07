@@ -1,43 +1,57 @@
+// controller/quote_provider.dart
 import 'dart:convert';
 import 'dart:math';
-
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:quote_generator/model/quote.dart';
 
-final kDio = Dio();
-final kRandGenerator = Random();
-
-class QuoteProvider {
+class QuoteProvider with ChangeNotifier {
+  final Dio _dio = Dio();
+  final Random _random = Random();
   List<QuoteModel>? _quotes;
-  static final QuoteProvider _instance = QuoteProvider._internal();
+  QuoteModel? _currentQuote;
+  bool _isLoading = false;
+  String? _error;
 
-  factory QuoteProvider() => _instance;
+  bool get isLoading => _isLoading;
+  String? get error => _error;
+  QuoteModel? get currentQuote => _currentQuote;
 
-  QuoteProvider._internal();
+  Future<void> loadQuotes() async {
+    if (_quotes != null && _quotes!.isNotEmpty) return;
 
-  /// returns [null] when there's no quote
-  QuoteModel? get quoteRand {
-    if (_quotes == null || _quotes!.isEmpty) return null;
-    final randNum = kRandGenerator.nextInt(_quotes!.length);
-    return _quotes![randNum];
-  }
-
-  Future<List<QuoteModel>> loadQuotes() async {
-    if (_quotes != null) return _quotes!;
-
-    await Future.delayed(Duration(seconds: 1));
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
 
     try {
-      final downloadUrl =
-          'https://raw.githubusercontent.com/dwyl/quotes/refs/heads/main/quotes.json';
-      final response = await kDio.get(downloadUrl);
-
+      const url =
+          'https://raw.githubusercontent.com/dwyl/quotes/main/quotes.json';
+      final response = await _dio.get(url);
       final List<dynamic> data = jsonDecode(response.data);
-      _quotes = data.map((json) => QuoteModel.fromJson(json)).toList();
-    } catch (e) {
-      print('failed to load quotes! : \n$e');
-    }
 
-    return _quotes!;
+      _quotes = data.map((json) => QuoteModel.fromJson(json)).toList();
+      _getRandomQuote();
+    } catch (e) {
+      _error = 'Failed to load quotes: $e';
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  void _getRandomQuote() {
+    if (_quotes == null || _quotes!.isEmpty) return;
+
+    _currentQuote = _quotes![_random.nextInt(_quotes!.length)];
+    notifyListeners();
+  }
+
+  Future<void> refreshQuote() async {
+    if (_quotes == null || _quotes!.isEmpty) {
+      await loadQuotes();
+    } else {
+      _getRandomQuote();
+    }
   }
 }

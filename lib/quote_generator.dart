@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:quote_generator/controller/quote_provider.dart';
 import 'package:quote_generator/view/quote_screen.dart';
 
 class QuoteGenerator extends StatelessWidget {
@@ -6,11 +8,15 @@ class QuoteGenerator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Random Quote Generator',
-      theme: ThemeData(primarySwatch: Colors.blue),
-      darkTheme: ThemeData.dark(),
-      home: QuoteScreen(),
+    return ChangeNotifierProvider(
+      create: (BuildContext context) => QuoteProvider()..loadQuotes(),
+      child: MaterialApp(
+        debugShowCheckedModeBanner: false,
+        title: 'Random Quote Generator',
+        theme: ThemeData(primarySwatch: Colors.blue),
+        darkTheme: ThemeData.dark(),
+        home: QuoteScreen(),
+      ),
     );
   }
 }
